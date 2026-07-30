@@ -1,24 +1,237 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState, useCallback } from "react";
+import { saveAs } from "file-saver";
+import {
+  extractParagraphs,
+  uniqueTranslatableCores,
+  buildTranslatedDocx,
+  type ExtractedParagraph,
+} from "@/lib/docx-pipeline";
+import { maskText, unmaskText } from "@/lib/mask";
+import { translateSegments } from "@/lib/translate.functions";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "DocTongue — Structure-Preserving DOCX Translator" },
+      {
+        name: "description",
+        content:
+          "Translate Word documents into Hindi, Odia, Tamil and more while preserving headings, numbers, formulas and protected terms.",
+      },
+      { property: "og:title", content: "DocTongue — Structure-Preserving DOCX Translator" },
+      {
+        property: "og:description",
+        content:
+          "Upload a .docx, pick a language, and get a translated document with headings, numbers and named entities intact.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+type Stage = "idle" | "extracting" | "translating" | "assembling" | "done" | "error";
+
+const LANGUAGES = [
+  "Hindi",
+  "Odia",
+  "Bengali",
+  "Tamil",
+  "Telugu",
+  "Marathi",
+  "Gujarati",
+  "Spanish",
+  "French",
+];
+
 function Index() {
+  const [file, setFile] = useState<File | null>(null);
+  const [targetLang, setTargetLang] = useState("Hindi");
+  const [userTermsInput, setUserTermsInput] = useState("");
+  const [stage, setStage] = useState<Stage>("idle");
+  const [progress, setProgress] = useState(0);
+  const [avgQuality, setAvgQuality] = useState(0);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped && dropped.name.endsWith(".docx")) setFile(dropped);
+  }, []);
+
+  const busy = stage === "extracting" || stage === "translating" || stage === "assembling";
+
+  const runTranslation = async () => {
+    if (!file) return;
+    setErrorMsg("");
+    setResultBlob(null);
+    try {
+      setStage("extracting");
+      const paragraphs: ExtractedParagraph[] = await extractParagraphs(file);
+      const cores = uniqueTranslatableCores(paragraphs);
+      const userTerms = userTermsInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      setStage("translating");
+      setProgress(0);
+
+      const masked = cores.map((c) => maskText(c, userTerms));
+      const maskedTexts = masked.map((m) => m.masked);
+
+      const batchSize = 20;
+      const translatedCache = new Map<string, string>();
+      const qualities: number[] = [];
+
+      for (let i = 0; i < maskedTexts.length; i += batchSize) {
+        const batchMasked = maskedTexts.slice(i, i + batchSize);
+        const { results } = await translateSegments({
+          data: { segments: batchMasked, targetLang, userTerms },
+        });
+
+        results.forEach((r, j) => {
+          const globalIdx = i + j;
+          const unmasked = unmaskText(r.translated, masked[globalIdx].tokenMap);
+          translatedCache.set(cores[globalIdx], unmasked);
+          qualities.push(r.quality);
+        });
+
+        setProgress(Math.min(100, Math.round(((i + batchMasked.length) / maskedTexts.length) * 100)));
+        setAvgQuality(qualities.reduce((a, b) => a + b, 0) / (qualities.length || 1));
+      }
+
+      setStage("assembling");
+      const blob = await buildTranslatedDocx(paragraphs, translatedCache);
+      setResultBlob(blob);
+      setStage("done");
+    } catch (e) {
+      console.error(e);
+      setErrorMsg(e instanceof Error ? e.message : String(e));
+      setStage("error");
+    }
+  };
+
+  const download = () => {
+    if (!resultBlob || !file) return;
+    saveAs(resultBlob, file.name.replace(/\.docx$/i, `_${targetLang}.docx`));
+  };
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-14">
+      <div className="w-full max-w-xl">
+        <header className="mb-10 text-center">
+          <h1 className="font-serif text-5xl tracking-tight text-foreground">DocTongue</h1>
+          <p className="mt-3 text-muted-foreground">
+            Structure-preserving document translation for .docx files.
+          </p>
+        </header>
+
+        <div
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={onDrop}
+          onClick={() => document.getElementById("file-input")?.click()}
+          className="cursor-pointer rounded-2xl border-2 border-dashed border-accent/40 bg-card/60 p-10 text-center transition-colors hover:bg-card"
+        >
+          <input
+            id="file-input"
+            type="file"
+            accept=".docx"
+            className="hidden"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          />
+          {file ? (
+            <p className="font-medium text-foreground">{file.name}</p>
+          ) : (
+            <p className="text-muted-foreground">Drag a .docx file here, or click to browse</p>
+          )}
+        </div>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="lang" className="mb-1 block text-sm text-muted-foreground">
+              Target language
+            </label>
+            <select
+              id="lang"
+              value={targetLang}
+              onChange={(e) => setTargetLang(e.target.value)}
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-ring"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l}>{l}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="terms" className="mb-1 block text-sm text-muted-foreground">
+              Preserve terms (comma-separated)
+            </label>
+            <input
+              id="terms"
+              value={userTermsInput}
+              onChange={(e) => setUserTermsInput(e.target.value)}
+              placeholder="e.g. NEET, Ayurveda"
+              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={runTranslation}
+          disabled={!file || busy}
+          className="mt-6 w-full rounded-lg bg-primary py-3 font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+        >
+          {busy ? "Working…" : "Translate document"}
+        </button>
+
+        {(stage === "translating" || stage === "assembling") && (
+          <div className="mt-6">
+            <div className="h-2 w-full rounded-full bg-secondary">
+              <div
+                className="h-2 rounded-full bg-accent transition-all"
+                style={{ width: `${stage === "assembling" ? 100 : progress}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {stage === "assembling"
+                ? "Rebuilding document…"
+                : `Translating… ${progress}% · avg quality ${avgQuality.toFixed(1)}/40`}
+            </p>
+          </div>
+        )}
+
+        {stage === "done" && (
+          <div className="mt-6 flex items-center justify-between gap-4 rounded-lg border border-accent/30 bg-accent/10 p-4">
+            <div>
+              <p className="font-medium text-foreground">Translation complete</p>
+              <p className="text-sm text-muted-foreground">
+                Average quality score: {avgQuality.toFixed(1)}/40
+              </p>
+            </div>
+            <button
+              onClick={download}
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
+            >
+              Download .docx
+            </button>
+          </div>
+        )}
+
+        {stage === "error" && (
+          <div className="mt-6 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+            {errorMsg}
+          </div>
+        )}
+
+        <p className="mt-8 text-center text-xs text-muted-foreground">
+          Headings, numbering, formulas and protected terms are preserved. Embedded images are not
+          carried over — review documents with figures.
+        </p>
+      </div>
+    </main>
   );
 }
