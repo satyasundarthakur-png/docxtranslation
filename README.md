@@ -1,26 +1,50 @@
-# docxtranslation
+# DocTongue
 
-deploy the uoloaded
+Structure-preserving AI document translation for .docx files — Hindi, Odia,
+Sanskrit, Bengali, Tamil, Telugu, Marathi, Gujarati, Spanish, and French.
 
-This project was built with [Lovable](https://lovable.dev).
+Built with React, Vite, TanStack Start, and Supabase Edge Functions, powered
+by Groq (`openai/gpt-oss-120b`).
 
-**Live app**: https://docxtranslation.lovable.app
+## Features
 
-## Build with Lovable
+- Masking-based translation that protects named entities, user-defined terms,
+  numbers, and formulas from being altered
+- Quality-scored retry loop (0–40 scale, retries below threshold)
+- Unicode-correct fonts per script in the output docx (Noto Sans Devanagari,
+  Oriya, Bengali, Tamil, Telugu, Gujarati)
+- Sanskrit-aware translation mode: preserves śloka/verse line breaks and
+  classical register, with an IAST transliteration preview
+- Heading and paragraph-level formatting preserved on rebuild
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/4380cab2-a837-4492-b373-ad06e7f73bd6).
+## Setup
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+\`\`\`bash
+npm install
+\`\`\`
 
-## Development
+Create a Supabase project, deploy the edge function, and set your Groq key:
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+\`\`\`bash
+supabase functions deploy translate-document
+supabase secrets set GROQ_API_KEY=gsk_...
+\`\`\`
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+Copy \`.env.example\` to \`.env\` and fill in your Supabase project URL and anon key.
+
+\`\`\`bash
 npm run dev
-```
+\`\`\`
+
+Deploy via [Lovable](https://lovable.dev) — push to GitHub, import the repo,
+set the \`VITE_SUPABASE_*\` env vars in project settings, then Publish.
+
+## Known limitations
+
+- No spaCy-grade named entity recognition in the browser — entity protection
+  relies on a capitalized-phrase heuristic plus your explicit "preserve
+  terms" list.
+- Embedded images/diagrams in the source docx are not carried over to the
+  output — review documents with figures before finalizing.
+- Tables and headers/footers are not yet extracted — only top-level
+  paragraphs.
