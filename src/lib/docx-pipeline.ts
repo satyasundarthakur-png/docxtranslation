@@ -17,6 +17,7 @@
 import mammoth from 'mammoth'
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx'
 import { isTranslatable } from './mask'
+import { fixOdiaOrthography } from './odia-normalize'
 
 export interface ExtractedParagraph {
   text: string
@@ -104,7 +105,8 @@ export async function buildTranslatedDocx(
 
   const docParagraphs = paragraphs.map((p) => {
     const { prefix, core } = splitPrefix(p.text)
-    const translatedCore = translatedCache.get(core) ?? core
+    let translatedCore = translatedCache.get(core) ?? core
+    if (targetLang === 'Odia') translatedCore = fixOdiaOrthography(translatedCore)
     const finalText = prefix + translatedCore
 
     return new Paragraph({

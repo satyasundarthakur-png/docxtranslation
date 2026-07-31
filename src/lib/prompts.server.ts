@@ -25,6 +25,11 @@ ${
     ? `
 8. **Classical Register**: This text may be a śloka, mantra, or classical prose excerpt. Preserve verse line breaks exactly as given, do not modernize or simplify Sanskrit vocabulary the way you would for other languages, and do not add avagraha, chandas markers, or punctuation not present in the source. Sandhi should follow standard classical usage, not be broken apart for readability.`
     : ""
+}${
+  targetLang === "Odia"
+    ? `
+8. **Odia-Specific Care**: Odia commonly borrows technical and classical vocabulary directly from Sanskrit (tatsama words) rather than using a simplified native equivalent — for medical, scientific, or Ayurvedic terms, prefer the standard tatsama form used in Odia textbooks over an invented simpler phrase, since simplifying these terms often produces unnatural or incorrect Odia. Use standard Odia orthography: write conjuncts and compound words (samasa) as a single word where that is standard usage, not as separated syllables. Double-check virama (halanta) usage — do not leave a dangling consonant that should form a conjunct with the next letter.`
+    : ""
 }
 `
 
