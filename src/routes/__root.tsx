@@ -77,20 +77,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DocTongue — Structure-Preserving DOCX Translator" },
-      {
-        name: "description",
-        content: "Translate Word documents into Hindi, Odia, Sanskrit and more while preserving headings, numbers, formulas and protected terms.",
-      },
       { name: "author", content: "Subhajit Saha" },
-      { property: "og:title", content: "DocTongue — Structure-Preserving DOCX Translator" },
-      {
-        property: "og:description",
-        content: "Upload a .docx, pick a language, and get a translated document with headings, numbers and named entities intact.",
-      },
+      { property: "og:site_name", content: "DocTongue" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+
     links: [
       {
         rel: "stylesheet",

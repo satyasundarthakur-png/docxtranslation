@@ -18,7 +18,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Translate Word documents into Hindi, Odia, Tamil and more while preserving headings, numbers, formulas and protected terms.",
+          "Translate Word documents into Hindi, Odia, Sanskrit, Tamil and more while preserving headings, numbers, formulas and protected terms.",
       },
       { property: "og:title", content: "DocTongue — Structure-Preserving DOCX Translator" },
       {
@@ -26,10 +26,11 @@ export const Route = createFileRoute("/")({
         content:
           "Upload a .docx, pick a language, and get a translated document with headings, numbers and named entities intact.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:url", content: "https://docxtranslation.lovable.app/" },
     ],
+    links: [{ rel: "canonical", href: "https://docxtranslation.lovable.app/" }],
   }),
+
   component: Index,
 });
 
@@ -144,13 +145,14 @@ function Index() {
 
       <div className="relative w-full max-w-xl">
         <header className="mb-10 text-center">
-          <h1 className="rainbow-float font-serif text-5xl font-semibold tracking-tight rainbow-text">
-            DocTongue
+          <h1 className="rainbow-float font-serif text-4xl font-semibold tracking-tight rainbow-text sm:text-5xl">
+            DocTongue — Structure-Preserving DOCX Translator
           </h1>
           <p className="mt-3 text-muted-foreground">
             Structure-preserving document translation for .docx files.
           </p>
         </header>
+
 
         <div
           onDragOver={(e) => e.preventDefault()}
