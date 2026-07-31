@@ -121,10 +121,19 @@ function Index() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-14">
-      <div className="w-full max-w-xl">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-14">
+      {/* Ambient rainbow orbs */}
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full rainbow-orb" />
+      <div
+        className="pointer-events-none absolute -bottom-40 -right-24 h-[28rem] w-[28rem] rounded-full rainbow-orb"
+        style={{ animationDirection: "reverse", animationDuration: "11s" }}
+      />
+
+      <div className="relative w-full max-w-xl">
         <header className="mb-10 text-center">
-          <h1 className="font-serif text-5xl tracking-tight text-foreground">DocTongue</h1>
+          <h1 className="rainbow-float font-serif text-5xl font-semibold tracking-tight rainbow-text">
+            DocTongue
+          </h1>
           <p className="mt-3 text-muted-foreground">
             Structure-preserving document translation for .docx files.
           </p>
@@ -134,7 +143,7 @@ function Index() {
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
           onClick={() => document.getElementById("file-input")?.click()}
-          className="cursor-pointer rounded-2xl border-2 border-dashed border-accent/40 bg-card/60 p-10 text-center transition-colors hover:bg-card"
+          className="rainbow-border cursor-pointer rounded-2xl bg-card/70 p-10 text-center backdrop-blur-sm transition-transform hover:scale-[1.01]"
         >
           <input
             id="file-input"
@@ -146,7 +155,9 @@ function Index() {
           {file ? (
             <p className="font-medium text-foreground">{file.name}</p>
           ) : (
-            <p className="text-muted-foreground">Drag a .docx file here, or click to browse</p>
+            <p className="text-muted-foreground">
+              <span className="rainbow-dot inline-block">🌈</span> Drag a .docx file here, or click to browse
+            </p>
           )}
         </div>
 
@@ -183,16 +194,16 @@ function Index() {
         <button
           onClick={runTranslation}
           disabled={!file || busy}
-          className="mt-6 w-full rounded-lg bg-primary py-3 font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+          className="rainbow-btn mt-6 w-full rounded-lg py-3 font-medium text-white shadow-lg transition-transform hover:scale-[1.01] disabled:opacity-40 disabled:hover:scale-100"
         >
           {busy ? "Working…" : "Translate document"}
         </button>
 
         {(stage === "translating" || stage === "assembling") && (
           <div className="mt-6">
-            <div className="h-2 w-full rounded-full bg-secondary">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-secondary">
               <div
-                className="h-2 rounded-full bg-accent transition-all"
+                className="rainbow-progress h-2.5 rounded-full transition-all"
                 style={{ width: `${stage === "assembling" ? 100 : progress}%` }}
               />
             </div>
@@ -205,16 +216,16 @@ function Index() {
         )}
 
         {stage === "done" && (
-          <div className="mt-6 flex items-center justify-between gap-4 rounded-lg border border-accent/30 bg-accent/10 p-4">
+          <div className="rainbow-border mt-6 flex items-center justify-between gap-4 rounded-lg bg-card/80 p-4 backdrop-blur-sm">
             <div>
-              <p className="font-medium text-foreground">Translation complete</p>
+              <p className="font-medium rainbow-text">Translation complete</p>
               <p className="text-sm text-muted-foreground">
                 Average quality score: {avgQuality.toFixed(1)}/40
               </p>
             </div>
             <button
               onClick={download}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
+              className="rainbow-btn rounded-lg px-4 py-2 text-sm font-medium text-white shadow transition-transform hover:scale-105"
             >
               Download .docx
             </button>
