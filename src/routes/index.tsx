@@ -74,7 +74,7 @@ function Index() {
     try {
       setStage("extracting");
       const paragraphs: ExtractedParagraph[] = await extractParagraphs(file);
-      const cores = uniqueTranslatableCores(paragraphs);
+      const translatableCores = uniqueTranslatableCores(paragraphs);
       const userTerms = userTermsInput
         .split(",")
         .map((t) => t.trim())
@@ -83,8 +83,11 @@ function Index() {
       setStage("translating");
       setProgress(0);
 
-      const masked = cores.map((c) => maskText(c, userTerms));
+      const masked = translatableCores.map(({ core, isHeading }) =>
+        maskText(core, userTerms, { skipCapitalizedPhraseHeuristic: isHeading }),
+      );
       const maskedTexts = masked.map((m) => m.masked);
+      const cores = translatableCores.map((tc) => tc.core);
 
       const batchSize = 20;
       const translatedCache = new Map<string, string>();

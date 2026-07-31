@@ -32,17 +32,12 @@ function findUserTermSpans(text: string, userTerms: string[]): [number, number, 
 
 function findCapitalizedPhraseSpans(text: string, userSpans: [number, number, string][]): [number, number, string][] {
   if (!text) return []
-  const pattern = /\b[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*){0,3}\b/g
+  const pattern = /\b[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*){1,3}\b/g
   const spans: [number, number, string][] = []
   let match: RegExpExecArray | null
   while ((match = pattern.exec(text)) !== null) {
     const s = match.index
     const e = s + match[0].length
-    // skip if it's just the first word of a sentence (heuristic: preceded by '. ' or start)
-    const before = text.slice(Math.max(0, s - 2), s)
-    const isSentenceStart = s === 0 || /[.!?]\s$/.test(before)
-    const singleWord = !match[0].includes(' ')
-    if (isSentenceStart && singleWord) continue
     const overlapsUser = userSpans.some(([us, ue]) => !(e <= us || s >= ue))
     if (overlapsUser) continue
     spans.push([s, e, match[0]])
@@ -50,10 +45,14 @@ function findCapitalizedPhraseSpans(text: string, userSpans: [number, number, st
   return spans
 }
 
-export function maskText(text: string, userTerms: string[]): { masked: string; tokenMap: TokenMap } {
+export function maskText(
+  text: string,
+  userTerms: string[],
+  options: { skipCapitalizedPhraseHeuristic?: boolean } = {},
+): { masked: string; tokenMap: TokenMap } {
   if (!text) return { masked: text, tokenMap: {} }
   const userSpans = findUserTermSpans(text, userTerms)
-  const neSpans = findCapitalizedPhraseSpans(text, userSpans)
+  const neSpans = options.skipCapitalizedPhraseHeuristic ? [] : findCapitalizedPhraseSpans(text, userSpans)
   const combined = [
     ...userSpans.map(([s, e, v]) => ({ s, e, v, kind: 'UT' as const })),
     ...neSpans.map(([s, e, v]) => ({ s, e, v, kind: 'NE' as const })),

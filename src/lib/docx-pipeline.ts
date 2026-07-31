@@ -56,17 +56,20 @@ export function splitPrefix(text: string): { prefix: string; core: string } {
   return { prefix: match[0], core: text.slice(match[0].length) }
 }
 
-export function uniqueTranslatableCores(paragraphs: ExtractedParagraph[]): string[] {
-  const seen = new Set<string>()
-  const cores: string[] = []
+export interface TranslatableCore {
+  core: string
+  isHeading: boolean
+}
+
+export function uniqueTranslatableCores(paragraphs: ExtractedParagraph[]): TranslatableCore[] {
+  const seen = new Map<string, boolean>() // core -> isHeading (true if ANY occurrence is a heading)
   for (const p of paragraphs) {
     const { core } = splitPrefix(p.text)
-    if (isTranslatable(core) && !seen.has(core)) {
-      seen.add(core)
-      cores.push(core)
-    }
+    if (!isTranslatable(core)) continue
+    const isHeading = Boolean(p.headingLevel)
+    seen.set(core, (seen.get(core) ?? false) || isHeading)
   }
-  return cores
+  return Array.from(seen.entries()).map(([core, isHeading]) => ({ core, isHeading }))
 }
 
 // Proper Unicode fonts per script — without this, Word/LibreOffice fall back
