@@ -11,7 +11,7 @@ import {
 } from "./prompts.server";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash";
+const MODEL = "google/gemini-3.5-flash";
 const QUALITY_THRESHOLD = 30;
 const MAX_RETRIES = 3;
 
