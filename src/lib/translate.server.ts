@@ -1,6 +1,7 @@
 // Translation + quality-scoring loop, ported from the original translator.py
 // (translate_text_with_quality / validate_translation_quality).
-// Runs on the Lovable AI Gateway instead of a self-hosted LLM key.
+// Runs directly against the Groq API — no Lovable AI Gateway, no metered
+// gateway credits.
 
 import {
   SYSTEM_PROMPT_BASE,
@@ -10,8 +11,8 @@ import {
   QUALITY_ASSESSMENT_PROMPT,
 } from "./prompts.server";
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3.5-flash";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = "openai/gpt-oss-120b";
 const QUALITY_THRESHOLD = 30;
 const MAX_RETRIES = 3;
 
@@ -28,21 +29,26 @@ async function callModel(
   maxTokens: number,
   temperature: number,
 ): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("AI gateway key is not configured");
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY is not configured");
 
-  const res = await fetch(GATEWAY_URL, {
+  const res = await fetch(GROQ_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ model: MODEL, messages, temperature, max_tokens: maxTokens }),
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      reasoning_format: "hidden", // required for openai/gpt-oss-120b on Groq
+    }),
   });
 
   if (res.status === 429) throw new Error("Rate limit reached, please retry shortly");
-  if (res.status === 402) throw new Error("AI credits exhausted for this workspace");
-  if (!res.ok) throw new Error(`AI gateway error ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new Error(`Groq API error ${res.status}: ${await res.text()}`);
 
   const data = await res.json();
   return stripReasoningArtifacts(data.choices?.[0]?.message?.content?.trim() ?? "");
