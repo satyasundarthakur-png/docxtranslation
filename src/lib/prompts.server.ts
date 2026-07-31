@@ -20,6 +20,12 @@ You MUST follow these rules without exception:
     Your task is ONLY to translate the surrounding natural language text. Reproduce all technical content exactly as it appears in the input.
 
 5. **Preserve Structure & Entities**: You MUST keep all structural and named items exactly as they are in the original text.
+${
+  targetLang === "Sanskrit"
+    ? `
+8. **Classical Register**: This text may be a śloka, mantra, or classical prose excerpt. Preserve verse line breaks exactly as given, do not modernize or simplify Sanskrit vocabulary the way you would for other languages, and do not add avagraha, chandas markers, or punctuation not present in the source. Sandhi should follow standard classical usage, not be broken apart for readability.`
+    : ""
+}
 `
 
 export const USER_TERMS_INSTRUCTION = (termsListStr: string) => `

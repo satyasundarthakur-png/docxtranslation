@@ -9,6 +9,7 @@ import {
 } from "@/lib/docx-pipeline";
 import { maskText, unmaskText } from "@/lib/mask";
 import { translateSegments } from "@/lib/translate.functions";
+import { devanagariToIAST } from "@/lib/transliterate";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,6 +38,7 @@ type Stage = "idle" | "extracting" | "translating" | "assembling" | "done" | "er
 const LANGUAGES = [
   "Hindi",
   "Odia",
+  "Sanskrit",
   "Bengali",
   "Tamil",
   "Telugu",
@@ -55,6 +57,7 @@ function Index() {
   const [avgQuality, setAvgQuality] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [iastPreview, setIastPreview] = useState<string | null>(null);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -105,8 +108,15 @@ function Index() {
       }
 
       setStage("assembling");
-      const blob = await buildTranslatedDocx(paragraphs, translatedCache);
+      const blob = await buildTranslatedDocx(paragraphs, translatedCache, targetLang);
       setResultBlob(blob);
+      if (targetLang === "Sanskrit") {
+        setIastPreview(
+          Array.from(translatedCache.values()).slice(0, 3).map(devanagariToIAST).join("\n\n"),
+        );
+      } else {
+        setIastPreview(null);
+      }
       setStage("done");
     } catch (e) {
       console.error(e);
@@ -229,6 +239,15 @@ function Index() {
             >
               Download .docx
             </button>
+          </div>
+        )}
+
+        {stage === "done" && iastPreview && (
+          <div className="rainbow-border mt-4 rounded-lg bg-card/80 p-4 backdrop-blur-sm">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              IAST transliteration preview (first 3 segments)
+            </p>
+            <pre className="whitespace-pre-wrap font-serif text-sm text-foreground">{iastPreview}</pre>
           </div>
         )}
 

@@ -68,6 +68,24 @@ export function uniqueTranslatableCores(paragraphs: ExtractedParagraph[]): strin
   return cores
 }
 
+// Proper Unicode fonts per script — without this, Word/LibreOffice fall back
+// to a default font that often lacks full Devanagari/Odia glyph coverage,
+// causing missing conjuncts or tofu boxes. Noto ships full coverage for both.
+const FONT_BY_LANGUAGE: Record<string, string> = {
+  Hindi: "Noto Sans Devanagari",
+  Sanskrit: "Noto Sans Devanagari",
+  Odia: "Noto Sans Oriya",
+  Bengali: "Noto Sans Bengali",
+  Tamil: "Noto Sans Tamil",
+  Telugu: "Noto Sans Telugu",
+  Marathi: "Noto Sans Devanagari",
+  Gujarati: "Noto Sans Gujarati",
+}
+
+export function fontForLanguage(targetLang: string): string | undefined {
+  return FONT_BY_LANGUAGE[targetLang]
+}
+
 const headingMap: Record<number, (typeof HeadingLevel)[keyof typeof HeadingLevel]> = {
   1: HeadingLevel.HEADING_1,
   2: HeadingLevel.HEADING_2,
@@ -80,7 +98,10 @@ const headingMap: Record<number, (typeof HeadingLevel)[keyof typeof HeadingLevel
 export async function buildTranslatedDocx(
   paragraphs: ExtractedParagraph[],
   translatedCache: Map<string, string>,
+  targetLang?: string,
 ): Promise<Blob> {
+  const font = targetLang ? fontForLanguage(targetLang) : undefined
+
   const docParagraphs = paragraphs.map((p) => {
     const { prefix, core } = splitPrefix(p.text)
     const translatedCore = translatedCache.get(core) ?? core
@@ -88,7 +109,13 @@ export async function buildTranslatedDocx(
 
     return new Paragraph({
       heading: p.headingLevel ? headingMap[p.headingLevel] : undefined,
-      children: [new TextRun({ text: finalText, bold: p.bold && !p.headingLevel })],
+      children: [
+        new TextRun({
+          text: finalText,
+          bold: p.bold && !p.headingLevel,
+          font: font,
+        }),
+      ],
     })
   })
 
